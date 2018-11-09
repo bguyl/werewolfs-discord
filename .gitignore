@@ -1,0 +1,8 @@
+# Node.js
+node_modules/
+
+# VS Code config
+.vscode/
+
+# Werewolf Discord
+dist/config.json
