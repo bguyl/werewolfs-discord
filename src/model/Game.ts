@@ -55,9 +55,12 @@ export class Game extends EventEmitter {
     });
 
     this.players = _.sortBy(this.players, (p: Player) => p.Role.Priority);
-    for (const player of this.players) {
-      // player.Role.play();
-    }
+    const nightPlayers = this.players.filter((p: Player) => p.Role.Priority > 0);
+    (async () => {
+      for (const player of nightPlayers) {
+        await player.Role.play();
+      }
+    })();
 
   }
 
