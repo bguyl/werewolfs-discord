@@ -19,7 +19,7 @@ function messagesHandler(message, channelManager) {
     else if (content.match(/^\!start.*$/)) {
         const game = gamesManager.findByOwner(message.author);
         if (game) {
-            game.GameModel.start();
+            game.start();
             message.delete();
         }
     }

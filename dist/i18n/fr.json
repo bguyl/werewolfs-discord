@@ -11,6 +11,7 @@
   "ordinary-townfolk": "Simple villageois",
   "ordinary-townfolk-desc": "Il n'a aucune compétence particulière. Ses seules armes sont la **capacité d'analyse** des comportements pour identifier les Loups-Garous, et la **force de conviction** pour empêcher l'exécution de l'innocent qu'il est.",
   "fortune-teller": "Voyante",
+  "fortune-teller-turn": "Choisissez un joueur dont vous souhaitez connaître le rôle",
   "fortune-teller-desc": "Chaque nuit, elle **découvre la vraie personnalité** d'un joueur de son choix. Elle doit aider les autres Villageois, mais rester discrète pour ne pas être démasquée par les Loups-Garous.",
   "cupid": "Cupidon",
   "cupid-desc": "En décochant ses célèbres flèches magiques, Cupidon a le pouvoir de rendre **2 personnes amoureuses à jamais**. La première nuit, il **désigne** les 2 joueurs amoureux. Cupidon peut, s'il le veut, se désigner comme l'un des deux Amoureux. Si l'un des Amoureux est **éliminé**, **l'autre meurt de chagrin immédiatement**. Un Amoureux ne doit jamais voter contre son aimé, ni lui porter aucun préjudice (même pour faire semblant !). \n**Attention**: si l'un des deux Amoureux est un **Loup-Garou** et l'autre un **Villageois**, le but de la partie change pour eux. Pour vivre en paix leur amour et gagner la partie, ils doivent éliminer tous les autres joueurs, Loups-Garous et Villageois, en respectant les règles de jeu.",

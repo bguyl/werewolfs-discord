@@ -1,53 +1,65 @@
 import Discord, { RichEmbed } from "discord.js";
 import i18next = require("i18next");
-import { Player as PlayerModel} from "../model/Player";
 import { ChannelsManager } from "../service/ChannelsManager";
 import { PlayersManager } from "../service/PlayersManager";
+import { Role } from "./Role";
 
 export class Player {
-  private playerModel: PlayerModel;
+  private static counter = 0;
   private user: Discord.User;
   private channel?: Discord.TextChannel;
+  private role?: Role;
+  private id: number;
+  private ingame: boolean = false;
+  private gameId: number;
 
-  constructor(user: Discord.User) {
+  constructor(user: Discord.User, gameId: number) {
+    this.id = Player.counter ++;
     this.user = user;
-    this.playerModel = new PlayerModel();
+    this.gameId = gameId;
     PlayersManager.getInstance().add(this);
-
-    let privateChanPromise: Promise<void>;
-    this.playerModel.on("gameJoined", (gameId: number) => {
-      privateChanPromise = this.createPrivateChannel(gameId);
-    });
-
-    this.playerModel.on("roleSet", async () => {
-      await privateChanPromise;
-      if (!this.channel) { return; }
-      this.channel.send(
-        new RichEmbed()
-          .setTitle(i18next.t("your-role") + this.playerModel.Role.Name)
-          .setDescription(this.playerModel.Role.Description)
-          .setImage(this.playerModel.Role.ImageURL)
-      );
-    });
-  }
-
-  get PlayerModel(): PlayerModel {
-    return this.playerModel;
   }
 
   get User(): Discord.User {
     return this.user;
   }
 
-  public async createPrivateChannel(gameId: number): Promise<void> {
+  public get Id(): number {
+    return this.id;
+  }
+
+  public get Role(): Role {
+    if (!this.role) { throw new Error("Attempt to access to player's role before assign it"); }
+    return this.role;
+  }
+
+  public set Role(role: Role) {
+    this.role = role;
+    this.ingame = true;
+    this.sendRole();
+  }
+
+  public async sendRole(): Promise<void> {
+    this.createPrivateChannel(this.gameId).then((c: Discord.TextChannel) => {
+      c.send(
+        new RichEmbed()
+          .setTitle(i18next.t("your-role") + this.Role.Name)
+          .setDescription(this.Role.Description)
+          .setImage(this.Role.ImageURL)
+      );
+    });
+  }
+
+  public async createPrivateChannel(gameId: number): Promise<Discord.TextChannel> {
     const gamesCategory = ChannelsManager.getInstance().GamesCategory;
-    this.channel = await gamesCategory.guild.createChannel(
+    return gamesCategory.guild.createChannel(
       this.user.username + "__" + gameId,
       "text",
       [{ allow: 66560, id: this.user.id }]
-    ).then((chan: Discord.Channel) => {
+    ).then((chan: Discord.GuildChannel) => {
       const textChan = chan as Discord.TextChannel;
+      this.channel = textChan;
       return textChan.setParent(gamesCategory);
-    }) as Discord.TextChannel;
+    }) as Promise<Discord.TextChannel>;
   }
 }

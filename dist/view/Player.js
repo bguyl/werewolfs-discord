@@ -10,44 +10,54 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const discord_js_1 = require("discord.js");
 const i18next = require("i18next");
-const Player_1 = require("../model/Player");
 const ChannelsManager_1 = require("../service/ChannelsManager");
 const PlayersManager_1 = require("../service/PlayersManager");
 class Player {
-    constructor(user) {
+    constructor(user, gameId) {
+        this.ingame = false;
+        this.id = Player.counter++;
         this.user = user;
-        this.playerModel = new Player_1.Player();
+        this.gameId = gameId;
         PlayersManager_1.PlayersManager.getInstance().add(this);
-        let privateChanPromise;
-        this.playerModel.on("gameJoined", (gameId) => {
-            privateChanPromise = this.createPrivateChannel(gameId);
-        });
-        this.playerModel.on("roleSet", () => __awaiter(this, void 0, void 0, function* () {
-            yield privateChanPromise;
-            if (!this.channel) {
-                return;
-            }
-            this.channel.send(new discord_js_1.RichEmbed()
-                .setTitle(i18next.t("your-role") + this.playerModel.Role.Name)
-                .setDescription(this.playerModel.Role.Description)
-                .setImage(this.playerModel.Role.ImageURL));
-        }));
-    }
-    get PlayerModel() {
-        return this.playerModel;
     }
     get User() {
         return this.user;
     }
+    get Id() {
+        return this.id;
+    }
+    get Role() {
+        if (!this.role) {
+            throw new Error("Attempt to access to player's role before assign it");
+        }
+        return this.role;
+    }
+    set Role(role) {
+        this.role = role;
+        this.ingame = true;
+        this.sendRole();
+    }
+    sendRole() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.createPrivateChannel(this.gameId).then((c) => {
+                c.send(new discord_js_1.RichEmbed()
+                    .setTitle(i18next.t("your-role") + this.Role.Name)
+                    .setDescription(this.Role.Description)
+                    .setImage(this.Role.ImageURL));
+            });
+        });
+    }
     createPrivateChannel(gameId) {
         return __awaiter(this, void 0, void 0, function* () {
             const gamesCategory = ChannelsManager_1.ChannelsManager.getInstance().GamesCategory;
-            this.channel = (yield gamesCategory.guild.createChannel(this.user.username + "__" + gameId, "text", [{ allow: 66560, id: this.user.id }]).then((chan) => {
+            return gamesCategory.guild.createChannel(this.user.username + "__" + gameId, "text", [{ allow: 66560, id: this.user.id }]).then((chan) => {
                 const textChan = chan;
+                this.channel = textChan;
                 return textChan.setParent(gamesCategory);
-            }));
+            });
         });
     }
 }
+Player.counter = 0;
 exports.Player = Player;
 //# sourceMappingURL=Player.js.map

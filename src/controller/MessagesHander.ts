@@ -16,7 +16,7 @@ export function messagesHandler(message: Discord.Message, channelManager: Channe
   } else if (content.match(/^\!start.*$/)) {
     const game = gamesManager.findByOwner(message.author);
     if (game) {
-      game.GameModel.start();
+      game.start();
       message.delete();
     }
   } else if (content.match(/^!create.*$/g)) {

@@ -20,12 +20,12 @@ function reactionsHandler(reaction, user, action) {
             }
         }
         else if (action === "add") {
-            gameNotStarted.GameModel.addPlayer(new Player_1.Player(user).PlayerModel);
+            gameNotStarted.addPlayer(new Player_1.Player(user, gameNotStarted.Id));
         }
         else {
             const player = playersManager.findByUser(user);
             if (player) {
-                gameNotStarted.GameModel.removePlayer(player.PlayerModel);
+                gameNotStarted.removePlayer(player);
                 playersManager.remove(player);
             }
         }

@@ -17,11 +17,11 @@ export function reactionsHandler(reaction: Discord.MessageReaction, user: Discor
     if (user.id === gameNotStarted.Owner.User.id) {
       if (action === "add") { reaction.remove(user); }
     } else if (action === "add") {
-      gameNotStarted.GameModel.addPlayer(new Player(user).PlayerModel);
+      gameNotStarted.addPlayer(new Player(user, gameNotStarted.Id));
     } else {
       const player = playersManager.findByUser(user);
       if (player) {
-        gameNotStarted.GameModel.removePlayer(player.PlayerModel);
+        gameNotStarted.removePlayer(player);
         playersManager.remove(player);
       }
     }
