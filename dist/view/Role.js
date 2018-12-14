@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const i18next_1 = __importDefault(require("i18next"));
 const ChannelsManager_1 = require("../service/ChannelsManager");
+const EmojisManager_1 = require("../service/EmojisManager");
 class Role {
     get Name() {
         return this.name;
@@ -46,6 +47,7 @@ class FortuneTeller extends NightRole {
     play(players) {
         return __awaiter(this, void 0, void 0, function* () {
             const cm = ChannelsManager_1.ChannelsManager.getInstance();
+            const em = EmojisManager_1.EmojisManager.getInstance();
             this.channel.then((c) => {
                 let playersList = "";
                 players.forEach((p, i) => {
@@ -54,7 +56,7 @@ class FortuneTeller extends NightRole {
                 c.send(i18next_1.default.t("fortune-teller-turn") + "\n" + playersList).then((m) => {
                     const msg = m;
                     players.forEach((p, i) => {
-                        msg.react(cm.Client.emojis.find((em) => em.name === "_" + i));
+                        msg.react(em.Numbers[i]);
                     });
                 });
                 return Promise.resolve();

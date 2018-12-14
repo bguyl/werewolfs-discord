@@ -3,6 +3,7 @@ import i18next from "i18next";
 import { cpus } from "os";
 import { messagesHandler } from "../controller/MessagesHander";
 import { ChannelsManager } from "../service/ChannelsManager";
+import { EmojisManager } from "../service/EmojisManager";
 import { Player } from "./Player";
 
 export abstract class Role {
@@ -51,6 +52,7 @@ export class FortuneTeller extends NightRole {
 
   public async play(players: Player[]): Promise<void> {
     const cm = ChannelsManager.getInstance();
+    const em = EmojisManager.getInstance();
     this.channel.then((c: Discord.TextChannel) => {
       let playersList = "";
       players.forEach((p, i) => {
@@ -59,7 +61,7 @@ export class FortuneTeller extends NightRole {
       c.send(i18next.t("fortune-teller-turn") + "\n" + playersList).then((m) => {
         const msg = m as Discord.Message;
         players.forEach((p, i) => {
-          msg.react(cm.Client.emojis.find((em) => em.name === "_" + i));
+          msg.react(em.Numbers[i]);
         });
       });
       return Promise.resolve();

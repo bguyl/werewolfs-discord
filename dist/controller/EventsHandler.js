@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const i18next_1 = __importDefault(require("i18next"));
 const ChannelsManager_1 = require("../service/ChannelsManager");
+const EmojisManager_1 = require("../service/EmojisManager");
 const MessagesHander_1 = require("./MessagesHander");
 const ReactionsHandler_1 = require("./ReactionsHandler");
 const pkg = require("../../package.json");
@@ -12,6 +13,7 @@ function eventsHandler(client) {
     let channelsManager;
     client.on("ready", () => {
         channelsManager = ChannelsManager_1.ChannelsManager.getInstance(client);
+        EmojisManager_1.EmojisManager.getInstance(client);
         if (process.env.NODE_ENV === "dev") {
             channelsManager.deleteAll();
         }
@@ -26,6 +28,7 @@ function eventsHandler(client) {
     client.on("messageReactionRemove", (reaction, user) => {
         ReactionsHandler_1.reactionsHandler(reaction, user, "remove");
     });
+    client.on("error", (error) => { console.error(error); });
 }
 exports.eventsHandler = eventsHandler;
 //# sourceMappingURL=EventsHandler.js.map
