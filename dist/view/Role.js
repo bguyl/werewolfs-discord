@@ -15,6 +15,12 @@ const i18next_1 = __importDefault(require("i18next"));
 const ChannelsManager_1 = require("../service/ChannelsManager");
 const EmojisManager_1 = require("../service/EmojisManager");
 class Role {
+    constructor(gameId, name, description, imageURL) {
+        this.name = name;
+        this.description = description;
+        this.imageURL = imageURL;
+        this.gameId = gameId;
+    }
     get Name() {
         return this.name;
     }
@@ -26,27 +32,57 @@ class Role {
     }
 }
 exports.Role = Role;
+class DayRole extends Role {
+    addPlayer(player) {
+        if (this.player) {
+            throw new Error("Player is already set.");
+        }
+        this.player = player;
+        player.sendRole(this);
+    }
+}
+exports.DayRole = DayRole;
 class NightRole extends Role {
+    constructor(gameId, name, description, imageURL, priority, firstRoundOnly) {
+        super(gameId, name, description, imageURL);
+        this.priority = priority;
+        this.firstRoundOnly = firstRoundOnly;
+        const cm = ChannelsManager_1.ChannelsManager.getInstance();
+        this.channel = cm.Guild.createChannel(name + "__" + gameId, "text");
+        this.channel.then((c) => c.setParent(cm.GamesCategory));
+    }
     get Priority() {
         return this.priority;
     }
 }
 exports.NightRole = NightRole;
-class FortuneTeller extends NightRole {
+class GroupRole extends NightRole {
+    constructor() {
+        super(...arguments);
+        this.players = [];
+    }
+    addPlayer(player) {
+        this.players.push(player);
+        player.sendRole(this);
+    }
+}
+exports.GroupRole = GroupRole;
+class SoloRole extends NightRole {
+    addPlayer(player) {
+        if (this.player) {
+            throw new Error("Player is already set.");
+        }
+        this.player = player;
+        player.sendRole(this);
+    }
+}
+exports.SoloRole = SoloRole;
+class FortuneTeller extends SoloRole {
     constructor(gameId) {
-        super();
-        this.name = i18next_1.default.t("fortune-teller");
-        this.description = i18next_1.default.t("fortune-teller-desc");
-        this.priority = 30;
-        this.firstRoundOnly = false;
-        this.imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte3_90_90.png";
-        const cm = ChannelsManager_1.ChannelsManager.getInstance();
-        this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text");
-        this.channel.then((c) => c.setParent(cm.GamesCategory));
+        super(gameId, i18next_1.default.t("fortune-teller"), i18next_1.default.t("fortune-teller-desc"), "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte3_90_90.png", 30, false);
     }
     play(players) {
         return __awaiter(this, void 0, void 0, function* () {
-            const cm = ChannelsManager_1.ChannelsManager.getInstance();
             const em = EmojisManager_1.EmojisManager.getInstance();
             this.channel.then((c) => {
                 let playersList = "";
@@ -56,7 +92,7 @@ class FortuneTeller extends NightRole {
                 c.send(i18next_1.default.t("fortune-teller-turn") + "\n" + playersList).then((m) => {
                     const msg = m;
                     players.forEach((p, i) => {
-                        msg.react(em.Numbers[i]);
+                        msg.react(em.Numbers[i + 1]);
                     });
                 });
                 return Promise.resolve();
@@ -65,17 +101,9 @@ class FortuneTeller extends NightRole {
     }
 }
 exports.FortuneTeller = FortuneTeller;
-class Witch extends NightRole {
+class Witch extends SoloRole {
     constructor(gameId, deathPotions, lifePotions) {
-        super();
-        this.name = i18next_1.default.t("witch");
-        this.description = i18next_1.default.t("witch-desc");
-        this.priority = 50;
-        this.firstRoundOnly = false;
-        this.imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte5_90_90.png";
-        const cm = ChannelsManager_1.ChannelsManager.getInstance();
-        this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text");
-        this.channel.then((c) => c.setParent(cm.GamesCategory));
+        super(gameId, i18next_1.default.t("witch"), i18next_1.default.t("witch-desc"), "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte5_90_90.png", 50, false);
         this.deathPotions = deathPotions ? deathPotions : 1;
         this.lifePotions = lifePotions ? lifePotions : 1;
     }
@@ -86,15 +114,10 @@ class Witch extends NightRole {
     }
 }
 exports.Witch = Witch;
-class Werewolf extends NightRole {
-    constructor(channelPromise) {
-        super();
-        this.name = i18next_1.default.t("werewolf");
-        this.description = i18next_1.default.t("werewolf-desc");
-        this.priority = 40;
-        this.firstRoundOnly = false;
-        this.imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte2_90_90.png";
-        this.channel = channelPromise;
+class Werewolf extends GroupRole {
+    constructor(gameId) {
+        super(gameId, i18next_1.default.t("werewolf"), i18next_1.default.t("werewolf-desc"), "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte2_90_90.png", 40, false);
+        this.players = [];
     }
     play(players) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -103,17 +126,9 @@ class Werewolf extends NightRole {
     }
 }
 exports.Werewolf = Werewolf;
-class Cupid extends NightRole {
+class Cupid extends SoloRole {
     constructor(gameId) {
-        super();
-        this.name = i18next_1.default.t("cupid");
-        this.description = i18next_1.default.t("cupid-desc");
-        this.priority = 20;
-        this.firstRoundOnly = true;
-        this.imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte7_90_90.png";
-        const cm = ChannelsManager_1.ChannelsManager.getInstance();
-        this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text");
-        this.channel.then((c) => c.setParent(cm.GamesCategory));
+        super(gameId, i18next_1.default.t("cupid"), i18next_1.default.t("cupid-desc"), "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte7_90_90.png", 20, true);
     }
     play(players) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -122,17 +137,9 @@ class Cupid extends NightRole {
     }
 }
 exports.Cupid = Cupid;
-class LittleGirl extends NightRole {
+class LittleGirl extends SoloRole {
     constructor(gameId) {
-        super();
-        this.name = i18next_1.default.t("little-girl");
-        this.description = i18next_1.default.t("little-girl-desc");
-        this.priority = 40;
-        this.firstRoundOnly = false;
-        this.imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte12_90_90.png";
-        const cm = ChannelsManager_1.ChannelsManager.getInstance();
-        this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text");
-        this.channel.then((c) => c.setParent(cm.GamesCategory));
+        super(gameId, i18next_1.default.t("little-girl"), i18next_1.default.t("little-girl-desc"), "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte12_90_90.png", 40, false);
     }
     play(players) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -141,17 +148,9 @@ class LittleGirl extends NightRole {
     }
 }
 exports.LittleGirl = LittleGirl;
-class Thief extends NightRole {
+class Thief extends SoloRole {
     constructor(gameId) {
-        super();
-        this.name = i18next_1.default.t("thief");
-        this.description = i18next_1.default.t("thief-desc");
-        this.priority = 10;
-        this.firstRoundOnly = true;
-        this.imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte11_90_90.png";
-        const cm = ChannelsManager_1.ChannelsManager.getInstance();
-        this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text");
-        this.channel.then((c) => c.setParent(cm.GamesCategory));
+        super(gameId, i18next_1.default.t("thief"), i18next_1.default.t("thief-desc"), "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte11_90_90.png", 10, true);
     }
     play(players) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -160,21 +159,15 @@ class Thief extends NightRole {
     }
 }
 exports.Thief = Thief;
-class OrdinaryTownfolk extends Role {
-    constructor() {
-        super(...arguments);
-        this.name = i18next_1.default.t("ordinary-townfolk");
-        this.description = i18next_1.default.t("ordinary-townfolk-desc");
-        this.imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte1_90_90.png";
+class OrdinaryTownfolk extends DayRole {
+    constructor(gameId) {
+        super(gameId, i18next_1.default.t("ordinary-townfolk"), i18next_1.default.t("ordinary-townfolk-desc"), "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte1_90_90.png");
     }
 }
 exports.OrdinaryTownfolk = OrdinaryTownfolk;
-class Hunter extends Role {
-    constructor() {
-        super(...arguments);
-        this.name = i18next_1.default.t("hunter");
-        this.description = i18next_1.default.t("hunter-desc");
-        this.imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte6_90_90.png";
+class Hunter extends DayRole {
+    constructor(gameId) {
+        super(gameId, i18next_1.default.t("hunter"), i18next_1.default.t("hunter-desc"), "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte6_90_90.png");
     }
 }
 exports.Hunter = Hunter;

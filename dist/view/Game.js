@@ -70,47 +70,66 @@ class Game {
     start() {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.players.length < 3) {
-                throw new Error("Not enought players to start a game.");
+                throw new Error("Not enough players to start a game.");
             }
             this.started = true;
             const cm = ChannelsManager_1.ChannelsManager.getInstance();
             cm.Guild.createChannel(i18next_1.default.t("village") + "__" + this.Id, "text")
                 .then((chan) => chan.setParent(cm.GamesCategory));
             const roles = this.generateRoleSet(this.players.length);
-            this.players.forEach((player) => {
-                player.Role = roles.pop();
+            const playersDistribution = lodash_1.default.shuffle(this.players);
+            roles.nightRoles.forEach((r) => {
+                const p = playersDistribution.pop();
+                if (!p) {
+                    throw new Error("Can't assign a player to this role");
+                }
+                r.addPlayer(p);
             });
-            let nightPlayers = this.players.filter((p) => p.Role instanceof Role_1.NightRole);
-            nightPlayers = lodash_1.default.sortBy(nightPlayers, (p) => {
-                const r = p.Role;
+            roles.firstNightRoles.forEach((r) => {
+                const p = playersDistribution.pop();
+                if (!p) {
+                    throw new Error("Can't assign a player to this role");
+                }
+                r.addPlayer(p);
+            });
+            roles.dayRoles.forEach((r) => {
+                const p = playersDistribution.pop();
+                if (!p) {
+                    throw new Error("Can't assign a player to this role");
+                }
+                r.addPlayer(p);
+            });
+            if (playersDistribution.length !== 0) {
+                throw new Error("Some players doesn't have any role");
+            }
+            const firstNight = lodash_1.default.sortBy(roles.nightRoles.concat(roles.firstNightRoles), (r) => {
                 return r.Priority;
             });
-            for (const player of nightPlayers) {
-                const r = player.Role;
-                yield r.play(this.players);
+            for (const role of firstNight) {
+                yield role.play(this.players);
             }
         });
     }
     generateRoleSet(amount) {
-        const roles = [];
-        const cm = ChannelsManager_1.ChannelsManager.getInstance();
-        const werewolfChannel = cm.Guild.createChannel(i18next_1.default.t("werewolf") + "__" + this.id, "text");
-        werewolfChannel.then((c) => c.setParent(cm.GamesCategory));
-        roles.push(new Role_1.Werewolf(werewolfChannel));
-        roles.push(new Role_1.Werewolf(werewolfChannel));
-        roles.push(new Role_1.Witch(this.Id));
-        roles.push(new Role_1.FortuneTeller(this.Id));
-        roles.push(new Role_1.Cupid(this.Id));
-        roles.push(new Role_1.Hunter());
-        if (amount > 6) {
-            roles.push(new Role_1.LittleGirl(this.Id));
-        }
-        if (amount > 7) {
-            for (let i = 0; i < amount - 7; i++) {
-                roles.push(new Role_1.OrdinaryTownfolk());
+        const nightRoles = [];
+        const firstNightRoles = [];
+        const dayRoles = [];
+        const werewolfRole = new Role_1.Werewolf(this.Id);
+        nightRoles.push(werewolfRole);
+        // nightRoles.push(werewolfRole);
+        nightRoles.push(new Role_1.Witch(this.Id));
+        nightRoles.push(new Role_1.FortuneTeller(this.Id));
+        // firstNightRoles.push(new Cupid(this.Id));
+        // dayRoles.push(new Hunter(this.Id));
+        if (amount > 3) {
+            //   roles.push(new LittleGirl(this.Id));
+            // }
+            // if (amount > 7) {
+            for (let i = 0; i < amount - 3; i++) {
+                dayRoles.push(new Role_1.OrdinaryTownfolk(this.Id));
             }
         }
-        return lodash_1.default.shuffle(roles);
+        return { nightRoles, firstNightRoles, dayRoles };
     }
 }
 Game.counter = 0;

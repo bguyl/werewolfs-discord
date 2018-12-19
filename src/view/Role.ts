@@ -1,15 +1,21 @@
 import Discord from "discord.js";
 import i18next from "i18next";
-import { cpus } from "os";
-import { messagesHandler } from "../controller/MessagesHander";
 import { ChannelsManager } from "../service/ChannelsManager";
 import { EmojisManager } from "../service/EmojisManager";
 import { Player } from "./Player";
 
 export abstract class Role {
-  protected abstract name: string;
-  protected abstract description: string;
-  protected abstract imageURL: string;
+  protected name: string;
+  protected description: string;
+  protected imageURL: string;
+  protected gameId: number;
+
+  constructor(gameId: number, name: string, description: string, imageURL: string) {
+    this.name = name;
+    this.description = description;
+    this.imageURL = imageURL;
+    this.gameId = gameId;
+  }
 
   public get Name(): string {
     return this.name;
@@ -22,36 +28,79 @@ export abstract class Role {
   public get ImageURL(): string {
     return this.imageURL;
   }
+
+  public abstract addPlayer(player: Player): void;
+}
+
+export abstract class DayRole extends Role {
+  protected player?: Player;
+
+  public addPlayer(player: Player) {
+    if (this.player) { throw new Error("Player is already set."); }
+    this.player = player;
+    player.sendRole(this);
+  }
 }
 
 export abstract class NightRole extends Role {
-  protected abstract priority: number;
-  protected abstract channel: Promise<Discord.TextChannel>;
-  protected abstract firstRoundOnly: boolean;
-  public async abstract play(players: Player[]): Promise<void>;
+  protected priority: number;
+  protected channel: Promise<Discord.TextChannel>;
+  protected firstRoundOnly: boolean;
+
+  constructor(
+    gameId: number,
+    name: string,
+    description: string,
+    imageURL: string,
+    priority: number,
+    firstRoundOnly: boolean) {
+    super(gameId, name, description, imageURL);
+    this.priority = priority;
+    this.firstRoundOnly = firstRoundOnly;
+    const cm = ChannelsManager.getInstance();
+    this.channel = cm.Guild.createChannel(name + "__" + gameId, "text") as Promise<Discord.TextChannel>;
+    this.channel.then((c: Discord.TextChannel) => c.setParent(cm.GamesCategory));
+  }
 
   public get Priority(): number {
     return this.priority;
   }
+
+  public async abstract play(players: Player[]): Promise<void>;
 }
 
-export class FortuneTeller extends NightRole {
-  protected name = i18next.t("fortune-teller");
-  protected description = i18next.t("fortune-teller-desc");
-  protected priority = 30;
-  protected firstRoundOnly = false;
-  protected imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte3_90_90.png";
-  protected channel: Promise<Discord.TextChannel>;
+export abstract class GroupRole extends NightRole {
+  protected players: Player[] = [];
 
+  public addPlayer(player: Player) {
+    this.players.push(player);
+    player.sendRole(this);
+  }
+}
+
+export abstract class SoloRole extends NightRole {
+  protected player?: Player;
+
+  public addPlayer(player: Player) {
+    if (this.player) { throw new Error("Player is already set."); }
+    this.player = player;
+    player.sendRole(this);
+  }
+}
+
+export class FortuneTeller extends SoloRole {
   constructor(gameId: number) {
-    super();
-    const cm = ChannelsManager.getInstance();
-    this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text") as Promise<Discord.TextChannel>;
-    this.channel.then((c: Discord.TextChannel) => c.setParent(cm.GamesCategory));
+    super(
+      gameId,
+      i18next.t("fortune-teller"),
+      i18next.t("fortune-teller-desc"),
+      "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte3_90_90.png",
+      30,
+      false
+    );
   }
 
   public async play(players: Player[]): Promise<void> {
-    const cm = ChannelsManager.getInstance();
     const em = EmojisManager.getInstance();
     this.channel.then((c: Discord.TextChannel) => {
       let playersList = "";
@@ -61,7 +110,7 @@ export class FortuneTeller extends NightRole {
       c.send(i18next.t("fortune-teller-turn") + "\n" + playersList).then((m) => {
         const msg = m as Discord.Message;
         players.forEach((p, i) => {
-          msg.react(em.Numbers[i]);
+          msg.react(em.Numbers[i + 1]);
         });
       });
       return Promise.resolve();
@@ -69,21 +118,20 @@ export class FortuneTeller extends NightRole {
   }
 }
 
-export class Witch extends NightRole {
-  protected name = i18next.t("witch");
-  protected description = i18next.t("witch-desc");
-  protected priority = 50;
-  protected firstRoundOnly = false;
-  protected imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte5_90_90.png";
-  protected channel: Promise<Discord.TextChannel>;
+export class Witch extends SoloRole {
+  protected player?: Player;
   private deathPotions: number;
   private lifePotions: number;
 
   constructor(gameId: number, deathPotions?: number, lifePotions?: number) {
-    super();
-    const cm = ChannelsManager.getInstance();
-    this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text") as Promise<Discord.TextChannel>;
-    this.channel.then((c: Discord.TextChannel) => c.setParent(cm.GamesCategory));
+    super(
+      gameId,
+      i18next.t("witch"),
+      i18next.t("witch-desc"),
+      "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte5_90_90.png",
+      50,
+      false
+    );
     this.deathPotions = deathPotions ? deathPotions : 1;
     this.lifePotions = lifePotions ? lifePotions : 1;
   }
@@ -93,37 +141,17 @@ export class Witch extends NightRole {
   }
 }
 
-export class Werewolf extends NightRole {
-  protected name = i18next.t("werewolf");
-  protected description = i18next.t("werewolf-desc");
-  protected priority = 40;
-  protected firstRoundOnly = false;
-  protected imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte2_90_90.png";
-  protected channel: Promise<Discord.TextChannel>;
-
-  constructor(channelPromise: Promise<Discord.TextChannel>) {
-    super();
-    this.channel = channelPromise;
-  }
-
-  public async play(players: Player[]): Promise<void> {
-    return Promise.resolve();
-  }
-}
-
-export class Cupid extends NightRole {
-  protected name = i18next.t("cupid");
-  protected description = i18next.t("cupid-desc");
-  protected priority = 20;
-  protected firstRoundOnly = true;
-  protected imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte7_90_90.png";
-  protected channel: Promise<Discord.TextChannel>;
-
+export class Werewolf extends GroupRole {
   constructor(gameId: number) {
-    super();
-    const cm = ChannelsManager.getInstance();
-    this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text") as Promise<Discord.TextChannel>;
-    this.channel.then((c: Discord.TextChannel) => c.setParent(cm.GamesCategory));
+    super(
+      gameId,
+      i18next.t("werewolf"),
+      i18next.t("werewolf-desc"),
+      "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte2_90_90.png",
+      40,
+      false
+    );
+    this.players = [];
   }
 
   public async play(players: Player[]): Promise<void> {
@@ -131,19 +159,16 @@ export class Cupid extends NightRole {
   }
 }
 
-export class LittleGirl extends NightRole {
-  protected name = i18next.t("little-girl");
-  protected description = i18next.t("little-girl-desc");
-  protected priority = 40;
-  protected firstRoundOnly = false;
-  protected imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte12_90_90.png";
-  protected channel: Promise<Discord.TextChannel>;
-
+export class Cupid extends SoloRole {
   constructor(gameId: number) {
-    super();
-    const cm = ChannelsManager.getInstance();
-    this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text") as Promise<Discord.TextChannel>;
-    this.channel.then((c: Discord.TextChannel) => c.setParent(cm.GamesCategory));
+    super(
+      gameId,
+      i18next.t("cupid"),
+      i18next.t("cupid-desc"),
+      "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte7_90_90.png",
+      20,
+      true
+    );
   }
 
   public async play(players: Player[]): Promise<void> {
@@ -151,20 +176,35 @@ export class LittleGirl extends NightRole {
   }
 }
 
-export class Thief extends NightRole {
-  protected name = i18next.t("thief");
-  protected description = i18next.t("thief-desc");
-  protected priority = 10;
-  protected firstRoundOnly = true;
-  protected imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte11_90_90.png";
-  protected channel: Promise<Discord.TextChannel>;
+export class LittleGirl extends SoloRole {
+  constructor(gameId: number) {
+    super(
+      gameId,
+      i18next.t("little-girl"),
+      i18next.t("little-girl-desc"),
+      "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte12_90_90.png",
+      40,
+      false
+    );
+  }
+
+  public async play(players: Player[]): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+export class Thief extends SoloRole {
   private secondRole?: Role;
 
   constructor(gameId: number) {
-    super();
-    const cm = ChannelsManager.getInstance();
-    this.channel = cm.Guild.createChannel(this.name + "__" + gameId, "text") as Promise<Discord.TextChannel>;
-    this.channel.then((c: Discord.TextChannel) => c.setParent(cm.GamesCategory));
+    super(
+      gameId,
+      i18next.t("thief"),
+      i18next.t("thief-desc"),
+      "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte11_90_90.png",
+      10,
+      true
+    );
   }
 
   public async play(players: Player[]): Promise<void> {
@@ -172,14 +212,24 @@ export class Thief extends NightRole {
   }
 }
 
-export class OrdinaryTownfolk extends Role {
-  protected name = i18next.t("ordinary-townfolk");
-  protected description = i18next.t("ordinary-townfolk-desc");
-  protected imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte1_90_90.png";
+export class OrdinaryTownfolk extends DayRole {
+  constructor(gameId: number) {
+    super(
+      gameId,
+      i18next.t("ordinary-townfolk"),
+      i18next.t("ordinary-townfolk-desc"),
+      "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte1_90_90.png"
+    );
+  }
 }
 
-export class Hunter extends Role {
-  protected name = i18next.t("hunter");
-  protected description = i18next.t("hunter-desc");
-  protected imageURL = "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte6_90_90.png";
+export class Hunter extends DayRole {
+  constructor(gameId: number) {
+    super(
+      gameId,
+      i18next.t("hunter"),
+      i18next.t("hunter-desc"),
+      "https://www.loups-garous-en-ligne.com/jeu/assets/images/miniatures/carte6_90_90.png"
+    );
+  }
 }

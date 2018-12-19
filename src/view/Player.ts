@@ -8,7 +8,6 @@ export class Player {
   private static counter = 0;
   private user: Discord.User;
   private channel?: Discord.TextChannel;
-  private role?: Role;
   private id: number;
   private ingame: boolean = false;
   private gameId: number;
@@ -28,24 +27,14 @@ export class Player {
     return this.id;
   }
 
-  public get Role(): Role {
-    if (!this.role) { throw new Error("Attempt to access to player's role before assign it"); }
-    return this.role;
-  }
-
-  public set Role(role: Role) {
-    this.role = role;
+  public async sendRole(role: Role): Promise<void> {
     this.ingame = true;
-    this.sendRole();
-  }
-
-  public async sendRole(): Promise<void> {
     this.createPrivateChannel(this.gameId).then((c: Discord.TextChannel) => {
       c.send(
         new RichEmbed()
-          .setTitle(i18next.t("your-role") + this.Role.Name)
-          .setDescription(this.Role.Description)
-          .setImage(this.Role.ImageURL)
+          .setTitle(i18next.t("your-role") + role.Name)
+          .setDescription(role.Description)
+          .setImage(role.ImageURL)
       );
     });
   }

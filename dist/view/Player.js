@@ -26,24 +26,14 @@ class Player {
     get Id() {
         return this.id;
     }
-    get Role() {
-        if (!this.role) {
-            throw new Error("Attempt to access to player's role before assign it");
-        }
-        return this.role;
-    }
-    set Role(role) {
-        this.role = role;
-        this.ingame = true;
-        this.sendRole();
-    }
-    sendRole() {
+    sendRole(role) {
         return __awaiter(this, void 0, void 0, function* () {
+            this.ingame = true;
             this.createPrivateChannel(this.gameId).then((c) => {
                 c.send(new discord_js_1.RichEmbed()
-                    .setTitle(i18next.t("your-role") + this.Role.Name)
-                    .setDescription(this.Role.Description)
-                    .setImage(this.Role.ImageURL));
+                    .setTitle(i18next.t("your-role") + role.Name)
+                    .setDescription(role.Description)
+                    .setImage(role.ImageURL));
             });
         });
     }

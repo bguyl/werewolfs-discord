@@ -4,7 +4,7 @@ import _ from "lodash";
 import { ChannelsManager } from "../service/ChannelsManager";
 import { Player } from "./Player";
 import {
-  Cupid, FortuneTeller, Hunter, LittleGirl, NightRole, OrdinaryTownfolk, Role, Thief, Werewolf, Witch
+  Cupid, FortuneTeller, Hunter, NightRole, OrdinaryTownfolk, Role, Werewolf, Witch
 } from "./Role";
 
 export class Game {
@@ -65,50 +65,65 @@ export class Game {
   }
 
   public async start() {
-    if (this.players.length < 3) { throw new Error("Not enought players to start a game."); }
+    if (this.players.length < 3) { throw new Error("Not enough players to start a game."); }
     this.started = true;
     const cm = ChannelsManager.getInstance();
     cm.Guild.createChannel(i18next.t("village") + "__" + this.Id, "text")
       .then((chan: Discord.GuildChannel) => chan.setParent(cm.GamesCategory));
 
     const roles = this.generateRoleSet(this.players.length);
+    const playersDistribution = _.shuffle(this.players);
 
-    this.players.forEach((player) => {
-      player.Role = roles.pop() as Role;
+    roles.nightRoles.forEach((r: NightRole) => {
+      const p = playersDistribution.pop();
+      if (!p) { throw new Error("Can't assign a player to this role"); }
+      r.addPlayer(p);
     });
 
-    let nightPlayers = this.players.filter((p: Player) => p.Role instanceof NightRole);
-    nightPlayers = _.sortBy(nightPlayers, (p: Player) => {
-      const r = p.Role as NightRole;
+    roles.firstNightRoles.forEach((r: NightRole) => {
+      const p = playersDistribution.pop();
+      if (!p) { throw new Error("Can't assign a player to this role"); }
+      r.addPlayer(p);
+    });
+
+    roles.dayRoles.forEach((r: Role) => {
+      const p = playersDistribution.pop();
+      if (!p) { throw new Error("Can't assign a player to this role"); }
+      r.addPlayer(p);
+    });
+
+    if (playersDistribution.length !== 0) {
+      throw new Error("Some players doesn't have any role");
+    }
+
+    const firstNight = _.sortBy(roles.nightRoles.concat(roles.firstNightRoles), (r: NightRole) => {
       return r.Priority;
     });
-    for (const player of nightPlayers) {
-      const r = player.Role as NightRole;
-      await r.play(this.players);
+
+    for (const role of firstNight) {
+      await role.play(this.players);
     }
   }
 
-  private generateRoleSet(amount: number): Role[] {
-    const roles: Role[] = [];
-    const cm = ChannelsManager.getInstance();
-    const werewolfChannel = cm.Guild.createChannel(
-      i18next.t("werewolf") + "__" + this.id , "text"
-    ) as Promise<Discord.TextChannel>;
-    werewolfChannel.then((c: Discord.TextChannel) => c.setParent(cm.GamesCategory));
-    roles.push(new Werewolf(werewolfChannel));
-    roles.push(new Werewolf(werewolfChannel));
-    roles.push(new Witch(this.Id));
-    roles.push(new FortuneTeller(this.Id));
-    roles.push(new Cupid(this.Id));
-    roles.push(new Hunter());
-    if (amount > 6) {
-      roles.push(new LittleGirl(this.Id));
-    }
-    if (amount > 7) {
-      for (let i = 0; i < amount - 7; i++) {
-        roles.push(new OrdinaryTownfolk());
+  private generateRoleSet(amount: number): { nightRoles: NightRole[], firstNightRoles: NightRole[], dayRoles: Role[] } {
+    const nightRoles: NightRole[] = [];
+    const firstNightRoles: NightRole[] = [];
+    const dayRoles: Role[] = [];
+    const werewolfRole = new Werewolf(this.Id);
+    nightRoles.push(werewolfRole);
+    // nightRoles.push(werewolfRole);
+    nightRoles.push(new Witch(this.Id));
+    nightRoles.push(new FortuneTeller(this.Id));
+    // firstNightRoles.push(new Cupid(this.Id));
+    // dayRoles.push(new Hunter(this.Id));
+    if (amount > 3) {
+    //   roles.push(new LittleGirl(this.Id));
+    // }
+    // if (amount > 7) {
+      for (let i = 0; i < amount - 3; i++) {
+        dayRoles.push(new OrdinaryTownfolk(this.Id));
       }
     }
-    return _.shuffle(roles);
+    return {nightRoles, firstNightRoles, dayRoles};
   }
 }

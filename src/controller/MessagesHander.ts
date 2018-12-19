@@ -18,6 +18,7 @@ export function messagesHandler(message: Discord.Message, channelManager: Channe
     if (game) {
       game.start();
       message.delete();
+      game.LobbyMessage.delete();
     }
   } else if (content.match(/^!create.*$/g)) {
     const args = content.split(" ");
