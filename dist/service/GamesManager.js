@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 class GamesManager {
     constructor() {
         this.games = [];
+        this.roles = [];
     }
     static getInstance() {
         if (GamesManager.instance) {
@@ -10,14 +11,25 @@ class GamesManager {
         }
         return GamesManager.instance = new GamesManager();
     }
-    add(game) {
+    addGame(game) {
         this.games.push(game);
     }
-    findByOwner(user) {
+    addRole(role) {
+        this.roles.push(role);
+    }
+    findGameByOwner(user) {
         return this.games.find((g) => g.Owner.User.id === user.id);
     }
-    findByLobbyMessage(message) {
+    findGameByLobbyMessage(message) {
         return this.games.find((g) => g.LobbyMessage.id === message.id);
+    }
+    findRoleByMessage(message) {
+        return this.roles.find((r) => {
+            if (!r.Message) {
+                return false;
+            }
+            return r.Message.id === message.id;
+        });
     }
 }
 exports.GamesManager = GamesManager;

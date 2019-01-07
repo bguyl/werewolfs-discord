@@ -8,7 +8,8 @@ function reactionsHandler(reaction, user, action) {
     const channelsManager = ChannelsManager_1.ChannelsManager.getInstance();
     const gamesManager = GamesManager_1.GamesManager.getInstance();
     const playersManager = PlayersManager_1.PlayersManager.getInstance();
-    const gameNotStarted = gamesManager.findByLobbyMessage(reaction.message);
+    const gameNotStarted = gamesManager.findGameByLobbyMessage(reaction.message);
+    const playingRole = gamesManager.findRoleByMessage(reaction.message);
     // Ignore reactions from the bot
     if (user.id === channelsManager.Client.user.id) {
         return;
@@ -29,6 +30,9 @@ function reactionsHandler(reaction, user, action) {
                 playersManager.remove(player);
             }
         }
+    }
+    else if (playingRole) {
+        console.log("Oui, oui");
     }
 }
 exports.reactionsHandler = reactionsHandler;

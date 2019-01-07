@@ -17,7 +17,7 @@ function messagesHandler(message, channelManager) {
         channelManager.General.send(i18next_1.default.t("help", { help: "!help", create: "!create", start: "!start" }));
     }
     else if (content.match(/^\!start.*$/)) {
-        const game = gamesManager.findByOwner(message.author);
+        const game = gamesManager.findGameByOwner(message.author);
         if (game) {
             game.start();
             message.delete();
@@ -26,7 +26,7 @@ function messagesHandler(message, channelManager) {
     }
     else if (content.match(/^!create.*$/g)) {
         const args = content.split(" ");
-        gamesManager.add(new Game_1.Game(message.author));
+        gamesManager.addGame(new Game_1.Game(message.author));
         message.delete();
     }
     else if (process.env.NODE_ENV === "dev" && content.match(/^!clear$/)) {

@@ -8,7 +8,8 @@ export function reactionsHandler(reaction: Discord.MessageReaction, user: Discor
   const channelsManager = ChannelsManager.getInstance();
   const gamesManager = GamesManager.getInstance();
   const playersManager = PlayersManager.getInstance();
-  const gameNotStarted = gamesManager.findByLobbyMessage(reaction.message);
+  const gameNotStarted = gamesManager.findGameByLobbyMessage(reaction.message);
+  const playingRole = gamesManager.findRoleByMessage(reaction.message);
 
   // Ignore reactions from the bot
   if (user.id === channelsManager.Client.user.id) { return; }
@@ -25,6 +26,6 @@ export function reactionsHandler(reaction: Discord.MessageReaction, user: Discor
         playersManager.remove(player);
       }
     }
+  } else if (playingRole) {
   }
-
 }

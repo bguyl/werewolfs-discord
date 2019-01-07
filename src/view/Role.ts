@@ -2,6 +2,7 @@ import Discord from "discord.js";
 import i18next from "i18next";
 import { ChannelsManager } from "../service/ChannelsManager";
 import { EmojisManager } from "../service/EmojisManager";
+import { GamesManager } from "../service/GamesManager";
 import { Player } from "./Player";
 
 export abstract class Role {
@@ -45,7 +46,9 @@ export abstract class DayRole extends Role {
 export abstract class NightRole extends Role {
   protected priority: number;
   protected channel: Promise<Discord.TextChannel>;
+  protected message?: Discord.Message;
   protected firstRoundOnly: boolean;
+  protected playPromise: Promise<void>;
 
   constructor(
     gameId: number,
@@ -60,10 +63,15 @@ export abstract class NightRole extends Role {
     const cm = ChannelsManager.getInstance();
     this.channel = cm.Guild.createChannel(name + "__" + gameId, "text") as Promise<Discord.TextChannel>;
     this.channel.then((c: Discord.TextChannel) => c.setParent(cm.GamesCategory));
+    this.playPromise = new Promise(() => {});
   }
 
   public get Priority(): number {
     return this.priority;
+  }
+
+  public get Message(): Discord.Message | undefined {
+    return this.message;
   }
 
   public async abstract play(players: Player[]): Promise<void>;
@@ -102,15 +110,22 @@ export class FortuneTeller extends SoloRole {
 
   public async play(players: Player[]): Promise<void> {
     const em = EmojisManager.getInstance();
+    const gm = GamesManager.getInstance();
+    const others = players.filter((p) => {
+      if (!this.player) { return true; }
+      return p.Id !== this.player.Id;
+    });
     this.channel.then((c: Discord.TextChannel) => {
       let playersList = "";
-      players.forEach((p, i) => {
+      others.forEach((p, i) => {
         playersList += (i + 1) + ". " + p.User.username + "\n";
       });
       c.send(i18next.t("fortune-teller-turn") + "\n" + playersList).then((m) => {
+        gm.addRole(this);
+        this.message = m as Discord.Message;
         const msg = m as Discord.Message;
-        players.forEach((p, i) => {
-          msg.react(em.Numbers[i + 1]);
+        others.forEach((p, i) => {
+          setTimeout(() => msg.react(em.Numbers[i + 1]), 500);
         });
       });
       return Promise.resolve();

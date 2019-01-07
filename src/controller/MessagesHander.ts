@@ -14,7 +14,7 @@ export function messagesHandler(message: Discord.Message, channelManager: Channe
   if (content.match(/^\!help.*$/)) {
     channelManager.General.send(i18next.t("help", {help : "!help", create: "!create", start: "!start"}));
   } else if (content.match(/^\!start.*$/)) {
-    const game = gamesManager.findByOwner(message.author);
+    const game = gamesManager.findGameByOwner(message.author);
     if (game) {
       game.start();
       message.delete();
@@ -22,7 +22,7 @@ export function messagesHandler(message: Discord.Message, channelManager: Channe
     }
   } else if (content.match(/^!create.*$/g)) {
     const args = content.split(" ");
-    gamesManager.add(new Game(message.author));
+    gamesManager.addGame(new Game(message.author));
     message.delete();
   } else if (process.env.NODE_ENV === "dev" && content.match(/^!clear$/)) {
     channelManager.General.fetchMessages().then((messages) => {

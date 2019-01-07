@@ -14,6 +14,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const i18next_1 = __importDefault(require("i18next"));
 const ChannelsManager_1 = require("../service/ChannelsManager");
 const EmojisManager_1 = require("../service/EmojisManager");
+const GamesManager_1 = require("../service/GamesManager");
 class Role {
     constructor(gameId, name, description, imageURL) {
         this.name = name;
@@ -54,6 +55,9 @@ class NightRole extends Role {
     get Priority() {
         return this.priority;
     }
+    get Message() {
+        return this.message;
+    }
 }
 exports.NightRole = NightRole;
 class GroupRole extends NightRole {
@@ -84,15 +88,24 @@ class FortuneTeller extends SoloRole {
     play(players) {
         return __awaiter(this, void 0, void 0, function* () {
             const em = EmojisManager_1.EmojisManager.getInstance();
+            const gm = GamesManager_1.GamesManager.getInstance();
+            const others = players.filter((p) => {
+                if (!this.player) {
+                    return true;
+                }
+                return p.Id !== this.player.Id;
+            });
             this.channel.then((c) => {
                 let playersList = "";
-                players.forEach((p, i) => {
+                others.forEach((p, i) => {
                     playersList += (i + 1) + ". " + p.User.username + "\n";
                 });
                 c.send(i18next_1.default.t("fortune-teller-turn") + "\n" + playersList).then((m) => {
+                    gm.addRole(this);
+                    this.message = m;
                     const msg = m;
-                    players.forEach((p, i) => {
-                        msg.react(em.Numbers[i + 1]);
+                    others.forEach((p, i) => {
+                        setTimeout(() => msg.react(em.Numbers[i + 1]), 500);
                     });
                 });
                 return Promise.resolve();
